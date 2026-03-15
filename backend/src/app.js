@@ -52,3 +52,15 @@ app.get('/health', (req, res) => {
 });
 
 export default app;
+
+// Start server if this file is run directly
+import sequelize from './config/database.js';
+import { startMarketEngine } from './utils/tradeEngine.js';
+
+const PORT = process.env.PORT || 5000;
+
+sequelize.sync({ alter: false }).then(() => {
+  console.log('Database connected');
+  startMarketEngine();
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+});
