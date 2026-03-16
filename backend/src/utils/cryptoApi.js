@@ -3,46 +3,53 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY;
-const NOWPAYMENTS_API_URL = process.env.NOWPAYMENTS_API_URL;
+const BLOCKONOMICS_API_KEY = process.env.BLOCKONOMICS_API_KEY;
+const BLOCKONOMICS_API_URL = process.env.BLOCKONOMICS_API_URL || 'https://www.blockonomics.co/api';
+const BLOCKONOMICS_SECRET = process.env.BLOCKONOMICS_SECRET;
 
-// Create a payment
+// Create a payment request with Blockonomics
 export const createPayment = async (amount, currency, orderId) => {
   try {
     const response = await axios.post(
-      `${NOWPAYMENTS_API_URL}/payment`,
+      `${BLOCKONOMICS_API_URL}/payments/`,
       {
-        price_amount: amount,
-        price_currency: 'usd',
-        pay_currency: currency,
+        amount: amount, // in USD
+        currency: currency || 'BTC',
         order_id: orderId,
-        ipn_callback_url: `${process.env.BACKEND_URL}/api/deposits/ipn`,
+        callback_url: `${process.env.BACKEND_URL}/api/deposits/ipn?secret=${BLOCKONOMICS_SECRET}`,
       },
       {
         headers: {
-          'x-api-key': NOWPAYMENTS_API_KEY,
+          'Authorization': `Bearer ${BLOCKONOMICS_API_KEY}`,
           'Content-Type': 'application/json',
         },
       }
     );
     return response.data;
   } catch (error) {
-    console.error('NowPayments error:', error.response?.data || error.message);
+    console.error('Blockonomics error:', error.response?.data || error.message);
     throw error;
   }
 };
 
-// Get payment status
+// Get payment status from Blockonomics
 export const getPaymentStatus = async (paymentId) => {
-  const response = await axios.get(`${NOWPAYMENTS_API_URL}/payment/${paymentId}`, {
-    headers: { 'x-api-key': NOWPAYMENTS_API_KEY },
-  });
-  return response.data;
+  try {
+    const response = await axios.get(`${BLOCKONOMICS_API_URL}/payments/${paymentId}`, {
+      headers: {
+        'Authorization': `Bearer ${BLOCKONOMICS_API_KEY}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Blockonomics error:', error.response?.data || error.message);
+    throw error;
+  }
 };
 
-// Verify IPN signature
+// Verify IPN signature from Blockonomics
 export const verifyIpnSignature = (data, signature) => {
-  const hmac = crypto.createHmac('sha512', process.env.NOWPAYMENTS_IPN_SECRET);
+  const hmac = crypto.createHmac('sha256', BLOCKONOMICS_API_KEY);
   const calculated = hmac.update(JSON.stringify(data)).digest('hex');
   return calculated === signature;
 };

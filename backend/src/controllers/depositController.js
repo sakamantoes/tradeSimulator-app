@@ -20,7 +20,7 @@ export const createDeposit = async (req, res) => {
     const companyFee = (amount * companyFeePercent) / 100;
     const netAmount = amount - platformFee - companyFee;
 
-    // Create order in NowPayments
+    // Create order in Blockonomics
     const orderId = `DEP_${userId}_${Date.now()}`;
     const paymentData = await createPayment(amount, currency, orderId);
 
@@ -28,8 +28,8 @@ export const createDeposit = async (req, res) => {
       userId,
       amount,
       currency,
-      transactionId: paymentData.payment_id,
-      walletAddress: paymentData.pay_address,
+      transactionId: paymentData.payment_id || paymentData.id,
+      walletAddress: paymentData.address || paymentData.pay_address,
       status: 'pending',
       platformFee,
       companyFee,
@@ -45,23 +45,24 @@ export const createDeposit = async (req, res) => {
   }
 };
 
-// IPN webhook from NowPayments
+// IPN webhook from Blockonomics
 export const ipnHandler = async (req, res) => {
   try {
-    const signature = req.headers['x-nowpayments-sig'];
+    const signature = req.headers['x-blockonomics-sig'] || req.headers['signature'];
     const isValid = verifyIpnSignature(req.body, signature);
     if (!isValid) {
       return res.status(400).send('Invalid signature');
     }
 
-    const { payment_id, payment_status, actually_paid } = req.body;
+    const { payment_id, id, status } = req.body;
+    const transactionId = payment_id || id;
 
-    const deposit = await Deposit.findOne({ where: { transactionId: payment_id } });
+    const deposit = await Deposit.findOne({ where: { transactionId } });
     if (!deposit) {
       return res.status(404).send('Deposit not found');
     }
 
-    if (payment_status === 'finished') {
+    if (status === 'completed' || status === 'finished'){
       await sequelize.transaction(async (t) => {
         deposit.status = 'confirmed';
         deposit.confirmations = 6; // assume
