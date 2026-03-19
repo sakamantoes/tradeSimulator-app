@@ -1,32 +1,16 @@
-import { Sequelize } from 'sequelize';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const sequelize = new Sequelize(process.env.DB_URL, {
-  dialect: 'mysql',
-  logging: false,
-  dialectOptions: {
-    connectTimeout: 60000,
-  },
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
-});
+const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://zaydensamuel269_db_user:zK9RBaM88qJ7c1qG@cluster0.vswhzjs.mongodb.net/?appName=Cluster0';
 
-// Test connection
-async function testConnection() {
-  try {
-    await sequelize.authenticate();
-    console.log('Connected to Railway MySQL successfully!');
-  } catch (error) {
-    console.error('Unable to connect:', error);
-  }
-}
+mongoose.connect(mongoUri)
+  .then(async () => {
+    console.log('Connected to MongoDB');
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+  });
 
-testConnection();
-
-export default sequelize;
+export default mongoose;

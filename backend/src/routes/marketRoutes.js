@@ -5,7 +5,7 @@ import {
   getAllPrices,
   getHistoricalData,
   getMarketSummary,
-  getMarketNews,
+ 
   createAsset,
   updateAsset,
   deleteAsset,
@@ -26,7 +26,7 @@ router.get('/price/:symbol', protect, apiLimiter, getAssetPrice);
 router.get('/prices', protect, apiLimiter, getAllPrices);
 router.get('/history/:symbol', protect, apiLimiter, getHistoricalData);
 router.get('/summary', protect, apiLimiter, getMarketSummary);
-router.get('/news', protect, apiLimiter, getMarketNews);
+
 
 // Admin routes
 router.post('/admin/assets', protect, isAdmin, logAdminAction, createAsset);

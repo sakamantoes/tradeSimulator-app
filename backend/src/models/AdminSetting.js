@@ -1,15 +1,15 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const AdminSetting = sequelize.define('AdminSetting', {
-  key: {
-    type: DataTypes.STRING,
-    primaryKey: true,
-  },
-  value: {
-    type: DataTypes.TEXT,
-    allowNull: false,
-  },
-});
+const adminSettingSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  value: { type: String, required: true },
+}, { timestamps: true });
+
+const AdminSetting = mongoose.models.AdminSetting || mongoose.model('AdminSetting', adminSettingSchema);
+
+adminSettingSchema.statics.get = async function (key, defaultValue = null) {
+  const setting = await this.findOne({ key });
+  return setting ? setting.value : defaultValue;
+};
 
 export default AdminSetting;

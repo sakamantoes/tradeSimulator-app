@@ -1,53 +1,18 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Trade = sequelize.define('Trade', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  asset: {
-    type: DataTypes.STRING, // AAC, TBC, etc.
-    allowNull: false,
-  },
-  amount: {
-    type: DataTypes.DECIMAL(15, 2),
-    allowNull: false,
-  },
-  prediction: {
-    type: DataTypes.ENUM('UP', 'DOWN'),
-    allowNull: false,
-  },
-  openPrice: {
-    type: DataTypes.DECIMAL(15, 2),
-  },
-  closePrice: {
-    type: DataTypes.DECIMAL(15, 2),
-  },
-  result: {
-    type: DataTypes.ENUM('win', 'loss', 'pending'),
-    defaultValue: 'pending',
-  },
-  profit: {
-    type: DataTypes.DECIMAL(15, 2),
-    defaultValue: 0,
-  },
-  duration: {
-    type: DataTypes.INTEGER, // in minutes
-    defaultValue: 1,
-  },
-  status: {
-    type: DataTypes.ENUM('open', 'closed', 'cancelled'),
-    defaultValue: 'open',
-  },
-  expiresAt: {
-    type: DataTypes.DATE,
-  },
-});
+const tradeSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  asset: { type: String, required: true },
+  amount: { type: Number, required: true },
+  prediction: { type: String, enum: ['UP', 'DOWN'], required: true },
+  openPrice: Number,
+  closePrice: Number,
+  result: { type: String, enum: ['win', 'loss', 'pending'], default: 'pending' },
+  profit: { type: Number, default: 0 },
+  duration: { type: Number, default: 1 },
+  status: { type: String, enum: ['open', 'closed', 'cancelled'], default: 'open' },
+  expiresAt: Date,
+}, { timestamps: true });
 
+const Trade = mongoose.models.Trade || mongoose.model('Trade', tradeSchema);
 export default Trade;

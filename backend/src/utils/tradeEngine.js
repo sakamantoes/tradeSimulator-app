@@ -1,76 +1,74 @@
+import mongoose from 'mongoose';
 import { MarketAsset, Trade, Wallet, TransactionLog } from '../models/index.js';
-import sequelize from '../config/database.js';
-import { Op } from 'sequelize';
-import { generatePriceMovement, calculateTradeResult } from './helpers.js';
+import { calculateTradeResult } from './helpers.js';
 
-// Simulate price movement for an asset
 export const simulatePrice = (asset) => {
   const volatility = asset.volatility;
   const trend = asset.trend;
-  const random = (Math.random() - 0.5) * 2 * volatility; // -volatility to +volatility
+  const random = (Math.random() - 0.5) * 2 * volatility;
   const change = trend + random;
   const newPrice = asset.currentPrice * (1 + change);
-  return Math.max(newPrice, 0.01); // prevent zero or negative
+  return Math.max(newPrice, 0.01);
 };
 
-// Update all asset prices (run every second for real-time)
 export const updateMarketPrices = async () => {
-  const assets = await MarketAsset.findAll({ where: { isActive: true } });
+  const assets = await MarketAsset.find({ isActive: true });
   for (const asset of assets) {
-    const newPrice = simulatePrice(asset);
-    asset.currentPrice = newPrice;
+    asset.currentPrice = simulatePrice(asset);
     await asset.save();
   }
 };
 
-// Process open trades
 export const processOpenTrades = async () => {
   const now = new Date();
-  const openTrades = await Trade.findAll({
-    where: {
-      status: 'open',
-      expiresAt: { [Op.lte]: now },
-    },
-  });
+  const openTrades = await Trade.find({ status: 'open', expiresAt: { $lte: now } });
 
   for (const trade of openTrades) {
-    const asset = await MarketAsset.findByPk(trade.asset);
+    const asset = await MarketAsset.findOne({ symbol: trade.asset });
     if (!asset) continue;
 
     const closePrice = asset.currentPrice;
     const openPrice = trade.openPrice;
     const { result, profit } = calculateTradeResult(trade.amount, trade.prediction, openPrice, closePrice);
 
-    await sequelize.transaction(async (t) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
       trade.result = result;
       trade.closePrice = closePrice;
       trade.profit = profit;
       trade.status = 'closed';
-      await trade.save({ transaction: t });
+      await trade.save({ session });
 
-      const wallet = await Wallet.findOne({ where: { userId: trade.userId }, transaction: t });
+      const wallet = await Wallet.findOne({ userId: trade.userId }).session(session);
+      if (!wallet) throw new Error('Wallet not found');
+
       if (result === 'win') {
-        wallet.balance = parseFloat(wallet.balance) + parseFloat(profit);
+        wallet.balance = (wallet.balance || 0) + (profit || 0);
       } else {
-        wallet.balance = parseFloat(wallet.balance) - parseFloat(trade.amount);
+        wallet.balance = (wallet.balance || 0) - (trade.amount || 0);
       }
-      await wallet.save({ transaction: t });
+      await wallet.save({ session });
 
-      await TransactionLog.create({
+      await TransactionLog.create([{
         userId: trade.userId,
         type: 'trade',
         amount: result === 'win' ? profit : -trade.amount,
         balanceAfter: wallet.balance,
         description: `Trade ${trade.asset} ${trade.prediction} ${result}`,
-      }, { transaction: t });
-    });
+      }], { session });
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      console.error('Trade processing error', error);
+    } finally {
+      session.endSession();
+    }
   }
 };
 
-// Start background jobs
 export const startMarketEngine = () => {
-  // Update prices every second
   setInterval(updateMarketPrices, 1000);
-  // Process trades every second
   setInterval(processOpenTrades, 1000);
 };

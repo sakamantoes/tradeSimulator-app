@@ -1,33 +1,12 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Wallet = sequelize.define('Wallet', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: { model: 'Users', key: 'id' },
-  },
-  balance: {
-    type: DataTypes.DECIMAL(15, 2),
-    defaultValue: 0.0,
-  },
-  totalDeposits: {
-    type: DataTypes.DECIMAL(15, 2),
-    defaultValue: 0.0,
-  },
-  totalWithdrawals: {
-    type: DataTypes.DECIMAL(15, 2),
-    defaultValue: 0.0,
-  },
-  bonusBalance: {
-    type: DataTypes.DECIMAL(15, 2),
-    defaultValue: 0.0,
-  },
-});
+const walletSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  balance: { type: Number, default: 0 },
+  totalDeposits: { type: Number, default: 0 },
+  totalWithdrawals: { type: Number, default: 0 },
+  bonusBalance: { type: Number, default: 0 },
+}, { timestamps: true });
 
+const Wallet = mongoose.models.Wallet || mongoose.model('Wallet', walletSchema);
 export default Wallet;

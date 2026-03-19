@@ -1,18 +1,13 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const TransactionLog = sequelize.define('TransactionLog', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  userId: DataTypes.INTEGER,
-  type: DataTypes.STRING, // deposit, withdrawal, trade, fee
-  amount: DataTypes.DECIMAL(15, 2),
-  balanceAfter: DataTypes.DECIMAL(15, 2),
-  description: DataTypes.TEXT,
-  ip: DataTypes.STRING,
-});
+const transactionLogSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  type: String,
+  amount: Number,
+  balanceAfter: Number,
+  description: String,
+  ip: String,
+}, { timestamps: true });
 
+const TransactionLog = mongoose.models.TransactionLog || mongoose.model('TransactionLog', transactionLogSchema);
 export default TransactionLog;

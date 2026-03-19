@@ -1,57 +1,28 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: { isEmail: true },
-  },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  fullName: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  role: {
-    type: DataTypes.ENUM('user', 'admin'),
-    defaultValue: 'user',
-  },
-  accountLevel: {
-    type: DataTypes.ENUM('Basic', 'Pro', 'VIP'),
-    defaultValue: 'Basic',
-  },
-  isVerified: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
-  resetPasswordToken: DataTypes.STRING,
-  resetPasswordExpires: DataTypes.DATE,
-  emailVerificationToken: DataTypes.STRING,
-}, {
-  hooks: {
-    beforeCreate: async (user) => {
-      user.password = await bcrypt.hash(user.password, 10);
-    },
-    beforeUpdate: async (user) => {
-      if (user.changed('password')) {
-        user.password = await bcrypt.hash(user.password, 10);
-      }
-    },
-  },
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  fullName: { type: String, required: true, trim: true },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  accountLevel: { type: String, enum: ['Basic', 'Pro', 'VIP'], default: 'Basic' },
+  isVerified: { type: Boolean, default: false },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  emailVerificationToken: String,
+  deletionToken: String,
+  deletionExpires: Date,
+}, { timestamps: true });
+
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+  this.password = await bcrypt.hash(this.password, 10);
 });
 
-User.prototype.comparePassword = function (candidatePassword) {
+userSchema.methods.comparePassword = function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

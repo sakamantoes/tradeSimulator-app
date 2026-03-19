@@ -12,6 +12,8 @@ import marketRoutes from './routes/marketRoutes.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import authConfig from './config/auth.js';
 import { checkMaintenanceMode } from './middleware/adminMiddleware.js';
+import './config/database.js';
+import { startMarketEngine } from './utils/tradeEngine.js';
 
 const app = express();
 
@@ -35,7 +37,7 @@ app.use('/api', limiter);
 
 app.get('/', (req,res)=>{
   res.send('Welcome to the Trade Simulator API');
-})
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -53,14 +55,6 @@ app.get('/health', (req, res) => {
 
 export default app;
 
-// Start server if this file is run directly
-import sequelize from './config/database.js';
-import { startMarketEngine } from './utils/tradeEngine.js';
-
 const PORT = process.env.PORT || 5000;
-
-sequelize.sync({ alter: false }).then(() => {
-  console.log('Database connected');
-  startMarketEngine();
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-});
+startMarketEngine();
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
